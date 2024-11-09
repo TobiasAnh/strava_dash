@@ -53,11 +53,11 @@ columns_short = [
 def get_engine():
 
     if load_dotenv():
-        DATABASE_USER = os.getenv("DATABASE_USER")
-        DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-        DATABASE_HOST = os.getenv("DATABASE_HOST")
-        DATABASE_PORT = os.getenv("DATABASE_PORT")
-        DATABASE_NAME = os.getenv("DATABASE_NAME")
+        DATABASE_USER = os.getenv("POSTGRES_USER")
+        DATABASE_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+        DATABASE_HOST = os.getenv("POSTGRES_HOST")
+        DATABASE_PORT = os.getenv("POSTGRES_PORT")
+        DATABASE_NAME = os.getenv("POSTGRES_DB")
 
     # Create the engine using the credentials from the .env file
     engine = create_engine(
