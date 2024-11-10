@@ -6,6 +6,7 @@ import polyline
 import plotly.graph_objects as go
 
 columns_shorter = [
+    "start_date",
     "name",
     "distance",
     "moving_time",
@@ -101,35 +102,41 @@ def get_all_polylines(polylines):
         return all_coordinates
 
 
-def get_density_fig(all_coordinates):
+def generate_folium_map(activities):
+    import folium
 
-    fig = go.Figure()
+    # Create a map centered at the average location
+    average_lat = 49.37
+    average_lon = 8.78
 
-    # Add paths to the figure using Scattermapbox
-    for path_name, group in all_coordinates.groupby("activity_id"):
-        fig.add_trace(
-            go.Scattermapbox(
-                lat=group["lat"],
-                lon=group["lon"],
-                mode="lines",
-                hoverinfo="none",
-                name=path_name,
-                line=dict(
-                    width=2,
-                    color="red",
-                ),
-                opacity=0.2,
-            )
-        )
-
-    # Update layout for the map
-    fig.update_layout(
-        # mapbox_style="carto-darkmatter",
-        mapbox_zoom=9,  # Adjust zoom based on your data
-        mapbox_center_lat=49.4,  # Center latitude
-        mapbox_center_lon=8.7,  # Center longitude
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        showlegend=False,
+    mymap = folium.Map(
+        location=[average_lat, average_lon],
+        zoom_start=12,
+        tiles="CartoDB Positron",
     )
 
-    return fig
+    for activity in activities.index:
+        activity = activities.loc[activity]
+        if not activity["summary_polyline"]:
+            print(f"No polyline found for {activity['name']}, {activity['start_date']}")
+            continue
+
+        activity_polyline = activity["summary_polyline"]
+        coordinates = polyline.decode(activity_polyline)
+
+        if activity["sport_type"] == "Ride":
+            color = "#1f78b4"
+        elif activity["sport_type"] == "MountainBikeRide":
+            color = "#ff7f00"
+        elif activity["sport_type"] == "Hike":
+            color = "#33a02c"
+        elif activity["sport_type"] == "VirtualRide":
+            color = "#6a3d9a"
+        else:
+            color = "#e31a1c"
+
+        # Add a PolyLine to connect the coordinates
+        folium.PolyLine(coordinates, color=color, weight=2.5, opacity=0.2).add_to(mymap)
+
+    # Save the map to an HTML file
+    mymap.save("heatmap.html")
