@@ -6,8 +6,6 @@ from strava_dash.func import columns_short, columns_shorter
 from strava_dash.func import (
     get_engine,
     fetch_data,
-    get_all_polylines,
-    get_density_fig,
     generate_folium_map,
 )
 

@@ -75,33 +75,6 @@ def fetch_data(engine, query, index_col=None):
     return df
 
 
-def get_all_polylines(polylines):
-    activity_ids = []
-    lats = []
-    lons = []
-    for activity_id, activity_polyline in polylines.items():
-        activity_id, activity_polyline
-        if activity_polyline:
-            deconded_polyline = polyline.decode(activity_polyline)
-            for coordinates in deconded_polyline:
-                lat, lon = coordinates
-                lats.append(lat)
-                lons.append(lon)
-
-                activity_ids.append(activity_id)
-
-    if len(lats) == len(lons):
-        all_coordinates = pd.DataFrame(
-            {
-                "activity_id": activity_ids,
-                "lat": lats,
-                "lon": lons,
-            }
-        )
-
-        return all_coordinates
-
-
 def generate_folium_map(activities):
     import folium
 
