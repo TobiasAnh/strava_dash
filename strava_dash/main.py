@@ -41,7 +41,7 @@ activities = activities.sort_values("start_date", ascending=False)
 activities = activities[columns_short]
 activities_short = activities[columns_shorter]
 
-generate_folium_map()
+generate_folium_map(activities)
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
