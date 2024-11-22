@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 import pandas as pd
 import polyline
 import plotly.graph_objects as go
+import folium
 
 columns_shorter = [
     "start_date",
@@ -76,7 +77,6 @@ def fetch_data(engine, query, index_col=None):
 
 
 def generate_folium_map(activities):
-    import folium
 
     # Create a map centered at the average location
     average_lat = 49.37
@@ -84,7 +84,7 @@ def generate_folium_map(activities):
 
     mymap = folium.Map(
         location=[average_lat, average_lon],
-        zoom_start=12,
+        zoom_start=10,
         tiles="CartoDB Positron",
     )
 

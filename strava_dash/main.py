@@ -41,10 +41,13 @@ activities = activities.sort_values("start_date", ascending=False)
 activities = activities[columns_short]
 activities_short = activities[columns_shorter]
 
+
+#
 generate_folium_map(activities)
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
+server = app.server  # Expose the Flask server instance for WSGI servers
 
 # Layout of the app
 app.layout = html.Div(
@@ -110,7 +113,7 @@ def render_content(tab):
                     sort_action="native",
                     filter_action="native",
                     page_action="native",
-                    page_size=20,  # Show 5 rows per page
+                    page_size=100,  # Show 5 rows per page
                 ),
             ]
         )
