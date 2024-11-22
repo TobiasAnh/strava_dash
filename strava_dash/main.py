@@ -1,11 +1,13 @@
 import dash
-from dash import dcc, html, Input, Output, dash_table
+import dash_bootstrap_components as dbc
+from dash import dcc, html, dash_table
 import pandas as pd
 
 from strava_dash.func import columns_short, columns_shorter
 from strava_dash.func import (
     get_engine,
     fetch_data,
+    convert_units,
     generate_folium_map,
 )
 
@@ -38,55 +40,64 @@ activities = fetch_data(
 activities["start_date"] = pd.to_datetime(activities["start_date"]).dt.date
 activities = activities.sort_values("start_date", ascending=False)
 
-activities = activities[columns_short]
-activities_short = activities[columns_shorter]
+df = convert_units(activities[columns_shorter])
 
-
-#
 generate_folium_map(activities)
 
 # Initialize the Dash app
-app = dash.Dash(__name__)
+app = dash.Dash(
+    __name__,
+    external_stylesheets=["/assets/bootstrap.min.css"],
+)
 server = app.server  # Expose the Flask server instance for WSGI servers
 
 # Layout of the app
 app.layout = html.Div(
     [
-        html.H1(
-            f"Strava activities of {athlete['firstname'].values}",
-            style={"text-align": "center"},
-        ),
-        # Tab navigation
-        html.Div(
+        dbc.Container(  # This makes the whole layout responsive
             [
-                dcc.Tabs(
-                    id="tabs",
-                    value="heatmap",
-                    children=[
-                        dcc.Tab(
-                            label="Activities",
-                            value="activities",
-                            style={"width": "100%"},
-                            # style={"padding": "10px"},
+                dbc.Row(
+                    dbc.Col(
+                        html.H1(
+                            f"Strava activities of {athlete['firstname'].values}",
+                            style={"text-align": "center"},
                         ),
-                        dcc.Tab(
-                            label="Heatmap",
-                            value="heatmap",
-                            style={"width": "100%"},
-                            # style={"padding": "10px"},
-                        ),
-                    ],
-                    style={
-                        "display": "flex",
-                        "flex-direction": "column",
-                        "width": "15%",
-                        # "margin-right": "2%",
-                    },
+                        width={"size": 6, "offset": 3},  # Center the H1
+                    )
                 ),
-                # Content will be rendered in this Div based on the selected tab
-                html.Div(id="tabs-content", style={"width": "80%"}),
-            ],
-            style={"display": "flex"},
+                dbc.Row(
+                    dbc.Col(
+                        html.Div(
+                            [
+                                dcc.Tabs(
+                                    id="tabs",
+                                    value="heatmap",
+                                    children=[
+                                        dcc.Tab(
+                                            label="Activities",
+                                            value="activities",
+                                            style={"width": "100%"},
+                                        ),
+                                        dcc.Tab(
+                                            label="Heatmap",
+                                            value="heatmap",
+                                            style={"width": "100%"},
+                                        ),
+                                    ],
+                                    style={
+                                        "display": "flex",
+                                        "flex-direction": "column",
+                                        "width": "100%",
+                                    },
+                                ),
+                                html.Div(id="tabs-content", style={"width": "100%"}),
+                            ],
+                            style={"display": "flex"},
+                        ),
+                        width=20,  # Full width for the tab container
+                    )
+                ),
+            ]
         ),
     ]
 )
@@ -104,9 +115,9 @@ def render_content(tab):
             [
                 dash_table.DataTable(
                     id="table",
-                    columns=[{"name": i, "id": i} for i in activities_short.columns],
-                    data=activities_short.to_dict("records"),
-                    style_table={"width": "70%", "margin": "auto"},
+                    columns=[{"name": i, "id": i} for i in df.columns],
+                    data=df.to_dict("records"),
+                    style_table={"width": "100%", "margin": "auto"},
                     style_cell={"textAlign": "center"},
                     style_header={"fontWeight": "bold"},
                     # Enable sorting, filtering, and pagination

@@ -76,6 +76,31 @@ def fetch_data(engine, query, index_col=None):
     return df
 
 
+def convert_units(df):
+    # Convert distance from meters to kilometers
+    df = df.copy()
+    # Convert distance from meters to kilometers and overwrite the column
+    df["distance"] = round(df["distance"] / 1000, 1)
+
+    # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
+    df["moving_time"] = pd.to_timedelta(df["moving_time"], unit="s")
+    df["moving_time"] = df["moving_time"].apply(
+        lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
+    )
+
+    # Convert elapsed_time (seconds) to timedelta and then to minutes, overwrite the column
+    df["elapsed_time"] = pd.to_timedelta(df["elapsed_time"], unit="s")
+    df["elapsed_time"] = df["elapsed_time"].apply(
+        lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
+    )
+
+    # Convert speed from m/s to km/h and overwrite the columns
+    df["average_speed"] = round(df["average_speed"] * 3.6, 1)
+    df["max_speed"] = round(df["max_speed"] * 3.6, 1)
+
+    return df
+
+
 def generate_folium_map(activities):
 
     # Create a map centered at the average location
@@ -91,7 +116,7 @@ def generate_folium_map(activities):
     for activity in activities.index:
         activity = activities.loc[activity]
         if not activity["summary_polyline"]:
-            print(f"No polyline found for {activity['name']}, {activity['start_date']}")
+            # print(f"No polyline found for {activity['name']}, {activity['start_date']}")
             continue
 
         activity_polyline = activity["summary_polyline"]
