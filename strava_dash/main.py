@@ -54,7 +54,7 @@ server = app.server  # Expose the Flask server instance for WSGI servers
 # Layout of the app
 app.layout = html.Div(
     [
-        dbc.Container(  # This makes the whole layout responsive
+        dbc.Container(
             [
                 dbc.Row(
                     dbc.Col(
@@ -62,7 +62,7 @@ app.layout = html.Div(
                             f"Strava activities of {athlete['firstname'].values}",
                             style={"text-align": "center"},
                         ),
-                        width={"size": 6, "offset": 3},  # Center the H1
+                        width={"size": 6, "offset": 3},
                     )
                 ),
                 dbc.Row(
@@ -76,28 +76,28 @@ app.layout = html.Div(
                                         dcc.Tab(
                                             label="Activities",
                                             value="activities",
-                                            style={"width": "100%"},
+                                            style={"width": "50%"},
                                         ),
                                         dcc.Tab(
                                             label="Heatmap",
                                             value="heatmap",
-                                            style={"width": "100%"},
+                                            style={"width": "50%"},
                                         ),
                                     ],
                                     style={
                                         "display": "flex",
-                                        "flex-direction": "column",
+                                        "flex-direction": "row",  # Horizontal tabs
                                         "width": "100%",
                                     },
                                 ),
                                 html.Div(id="tabs-content", style={"width": "100%"}),
                             ],
-                            style={"display": "flex"},
                         ),
-                        width=20,  # Full width for the tab container
+                        width=12,  # Full width
                     )
                 ),
-            ]
+            ],
+            fluid=True,  # Improved responsiveness
         ),
     ]
 )
