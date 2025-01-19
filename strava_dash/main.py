@@ -1,6 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, dash_table
+from datetime import datetime
 import pandas as pd
 
 from strava_dash.func import columns_short, columns_shorter
@@ -37,10 +38,31 @@ activities = fetch_data(
     "activity_id",
 )
 
-activities["start_date"] = pd.to_datetime(activities["start_date"]).dt.date
-activities = activities.sort_values("start_date", ascending=False)
 
-df = convert_units(activities[columns_shorter])
+###### TODO df and metrics for new overview tab
+# Creating df for all individual activities
+activities["start_date"] = pd.to_datetime(activities["start_date"])
+activities = activities.sort_values("start_date", ascending=False)
+activities_ready = convert_units(
+    activities[columns_shorter]
+)  # TODO may need some rephrasing in output
+
+# Creating df of annul summaries
+annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")).agg(
+    n_activities=("resource_state", "size"),
+    total_distance=("distance", "sum"),
+    total_moving_time=("moving_time", "sum"),
+    total_elapsed_time=("elapsed_time", "sum"),
+    total_elevation_gain=("total_elevation_gain", "sum"),
+    average_speed=("average_speed", "mean"),  # TODO needs to be weighted by distance
+    max_speed=("max_speed", "max"),
+)
+
+annual_summaries = convert_units(
+    annual_summaries
+)  # TODO convert units function not working for both dataframe yet
+annual_summaries.sort_values()
+#####
 
 generate_folium_map(activities)
 
@@ -73,6 +95,11 @@ app.layout = html.Div(
                                     id="tabs",
                                     value="heatmap",
                                     children=[
+                                        dcc.Tab(
+                                            label="Overview",
+                                            value="overview",
+                                            style={"width": "50%"},
+                                        ),
                                         dcc.Tab(
                                             label="Activities",
                                             value="activities",
@@ -116,7 +143,7 @@ def render_content(tab):
                 dash_table.DataTable(
                     id="table",
                     columns=[{"name": i, "id": i} for i in df.columns],
-                    data=df.to_dict("records"),
+                    data=activities.to_dict("records"),
                     style_table={"width": "100%", "margin": "auto"},
                     style_cell={"textAlign": "center"},
                     style_header={"fontWeight": "bold"},
@@ -133,6 +160,16 @@ def render_content(tab):
             srcDoc=open("heatmap.html", "r").read(),  # Load the saved HTML file
             width="100%",  # Width of the map
             height="600",  # Height of the map
+        )
+
+    elif tab == "overview":
+        # Placeholder content for the new tab
+        return html.Div(
+            [
+                html.H3("This is a new tab!"),
+                html.P("Content for this tab will be added later."),
+            ],
+            style={"textAlign": "center", "padding": "20px"},
         )
 
 

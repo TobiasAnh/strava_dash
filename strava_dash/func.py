@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import folium
 
 columns_shorter = [
+    "resource_state",
     "start_date",
     "name",
     "distance",
@@ -77,26 +78,26 @@ def fetch_data(engine, query, index_col=None):
 
 
 def convert_units(df):
-    # Convert distance from meters to kilometers
     df = df.copy()
+
     # Convert distance from meters to kilometers and overwrite the column
-    df["distance"] = round(df["distance"] / 1000, 1)
+    distance_cols = findColumns(df, "distance")
+    for distance_col in distance_cols:
+        df[distance_col] = round(df[distance_col] / 1000, 1)
 
-    # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
-    df["moving_time"] = pd.to_timedelta(df["moving_time"], unit="s")
-    df["moving_time"] = df["moving_time"].apply(
-        lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
-    )
+    time_cols = findColumns(df, "time")
+    for time_col in time_cols:
+        # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
+        df[time_col] = pd.to_timedelta(df[time_col], unit="s")
+        df[time_col] = df[time_col].apply(
+            lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
+        )
 
-    # Convert elapsed_time (seconds) to timedelta and then to minutes, overwrite the column
-    df["elapsed_time"] = pd.to_timedelta(df["elapsed_time"], unit="s")
-    df["elapsed_time"] = df["elapsed_time"].apply(
-        lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
-    )
-
-    # Convert speed from m/s to km/h and overwrite the columns
-    df["average_speed"] = round(df["average_speed"] * 3.6, 1)
-    df["max_speed"] = round(df["max_speed"] * 3.6, 1)
+    speed_cols = findColumns(df, "speed")
+    for speed_col in speed_cols:
+        # Convert speed from m/s to km/h and overwrite the columns
+        df[speed_col] = round(df[speed_col] * 3.6, 1)
+        df[speed_col] = round(df[speed_col] * 3.6, 1)
 
     return df
 
@@ -138,3 +139,9 @@ def generate_folium_map(activities):
 
     # Save the map to an HTML file
     mymap.save("heatmap.html")
+
+
+def findColumns(df, search_term):
+    found_columns = [col for col in df.columns if search_term in col]
+    print(f"Found {len(found_columns)} columns having {search_term} in name")
+    return found_columns
