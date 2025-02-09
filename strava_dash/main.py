@@ -1,6 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, dash_table
+import plotly.express as px
 from datetime import datetime
 import pandas as pd
 
@@ -11,6 +12,8 @@ from strava_dash.func import (
     convert_units,
     generate_folium_map,
 )
+
+# TODO general: parts may be split up and put in other files (too much)
 
 
 # Connect to PostgreSQL database using SQLAlchemy
@@ -39,7 +42,7 @@ activities = fetch_data(
 )
 
 
-###### TODO df and metrics for new overview tab
+# NOTE OBJECT FOR TAB ACTIVITIES
 # Creating df for all individual activities
 activities["start_date"] = pd.to_datetime(activities["start_date"])
 activities = activities.sort_values("start_date", ascending=False)
@@ -47,26 +50,85 @@ activities_ready = convert_units(
     activities[columns_shorter]
 )  # TODO may need some rephrasing in output
 
-# Creating df of annul summaries
+# NOTE OBJECT FOR TAB HEATMAP
+# Creating heatmap
+generate_folium_map(activities)
+
+# NOTE OBJECT FOR TAB OVERVIEW
+# Creating line graph of cumulative distance per year
+activities_ready["start_year"] = activities_ready["start_date"].dt.year
+activities_ready["annual_cumulative_distance"] = (
+    activities_ready.sort_values("start_date")
+    .groupby("start_year")["distance"]
+    .cumsum()
+)
+
+# Get current year and aimed distance goal
+current_year = datetime.now().year
+start_date = pd.to_datetime(f"{current_year}-01-01")
+end_date = pd.to_datetime(f"{current_year}-12-31")
+days_in_year = (end_date - start_date).days + 1
+
+# Define the distance goal
+total_goal_distance = 8000  # TODO Hardcoded
+daily_distance_goal = total_goal_distance / days_in_year  # km/day
+goal_dates = pd.date_range(start_date, end_date, freq="D")
+goal_distances = daily_distance_goal * (goal_dates - start_date).days
+
+
+fig_annual_cumsum = px.line(
+    activities_ready.query("start_year == @current_year"),
+    x="start_date",  # Adjust column name if needed
+    y="annual_cumulative_distance",
+    # color="start_year",  # Adjust this to a numeric column you want to plot
+    # title=f"Cumulate km of rides for {current_year}",
+)
+
+fig_annual_cumsum.update_layout(
+    xaxis=dict(
+        range=[start_date, end_date],  # Full year range on x-axis
+        tickformat="%b",  # Show month abbreviations on the x-axis
+        tickmode="array",  # Specify custom ticks
+        tickvals=pd.date_range(
+            start=start_date, end=end_date, freq="MS"
+        ),  # First of every month
+        ticktext=[
+            date.strftime("%b")
+            for date in pd.date_range(start=start_date, end=end_date, freq="MS")
+        ],  # Month names
+    ),
+    yaxis=dict(title="Cumulative Distance (km)"),
+)
+
+fig_annual_cumsum.add_scatter(
+    x=goal_dates,  # The date range for the goal
+    y=goal_distances,  # The cumulative goal distance
+    mode="lines",
+    name=f"Reference line for annual aim ({total_goal_distance} km)",  # Label for the goal line
+    line=dict(color="grey", dash="dash"),  # Customize the line style (red, dashed)
+)
+
+# Creating df of annual summaries
 annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")).agg(
     n_activities=("resource_state", "size"),
     total_distance=("distance", "sum"),
     total_moving_time=("moving_time", "sum"),
     total_elapsed_time=("elapsed_time", "sum"),
     total_elevation_gain=("total_elevation_gain", "sum"),
-    average_speed=("average_speed", "mean"),  # TODO needs to be weighted by distance
     max_speed=("max_speed", "max"),
+    average_speed=("average_speed", "mean"),
 )
 
-annual_summaries = convert_units(
-    annual_summaries
-)  # TODO convert units function not working for both dataframe yet
-annual_summaries.sort_values()
-#####
+annual_summaries["average_speed_weighted"] = activities.groupby(
+    activities["start_date"].dt.to_period("Y")
+).apply(lambda x: (x["average_speed"] * x["distance"]).sum() / x["distance"].sum())
 
-generate_folium_map(activities)
+annual_summaries = convert_units(annual_summaries)
+annual_summaries = annual_summaries.reset_index(drop=False)
+annual_summaries["start_date"] = annual_summaries["start_date"].astype(str).astype(int)
+annual_summaries_ready = annual_summaries.sort_values("start_date", ascending=False)
 
-# Initialize the Dash app
+# NOTE Initialize the Dash app
 app = dash.Dash(
     __name__,
     external_stylesheets=["/assets/bootstrap.min.css"],
@@ -93,7 +155,7 @@ app.layout = html.Div(
                             [
                                 dcc.Tabs(
                                     id="tabs",
-                                    value="heatmap",
+                                    value="overview",
                                     children=[
                                         dcc.Tab(
                                             label="Overview",
@@ -141,11 +203,11 @@ def render_content(tab):
         return html.Div(
             [
                 dash_table.DataTable(
-                    id="table",
-                    columns=[{"name": i, "id": i} for i in df.columns],
-                    data=activities.to_dict("records"),
+                    id="table_activities",
+                    columns=[{"name": i, "id": i} for i in activities_ready.columns],
+                    data=activities_ready.to_dict("records"),
                     style_table={"width": "100%", "margin": "auto"},
-                    style_cell={"textAlign": "center"},
+                    style_cell={"textAlign": "right"},
                     style_header={"fontWeight": "bold"},
                     # Enable sorting, filtering, and pagination
                     sort_action="native",
@@ -166,10 +228,27 @@ def render_content(tab):
         # Placeholder content for the new tab
         return html.Div(
             [
-                html.H3("This is a new tab!"),
-                html.P("Content for this tab will be added later."),
-            ],
-            style={"textAlign": "center", "padding": "20px"},
+                dcc.Graph(
+                    id="annual_summary_graph",
+                    figure=fig_annual_cumsum,
+                    style={"width": "100%", "height": "400px"},
+                ),
+                dash_table.DataTable(
+                    id="table_annual_summaries",
+                    columns=[
+                        {"name": i, "id": i} for i in annual_summaries_ready.columns
+                    ],
+                    data=annual_summaries_ready.to_dict("records"),
+                    style_table={"width": "100%", "margin": "auto"},
+                    style_cell={"textAlign": "right"},
+                    style_header={"fontWeight": "bold"},
+                    # Enable sorting, filtering, and pagination
+                    sort_action="native",
+                    filter_action="native",
+                    page_action="native",
+                    page_size=100,  # Show 5 rows per page
+                ),
+            ]
         )
 
 

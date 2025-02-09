@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import folium
 
 columns_shorter = [
-    "resource_state",
     "start_date",
     "name",
     "distance",
@@ -77,31 +76,6 @@ def fetch_data(engine, query, index_col=None):
     return df
 
 
-def convert_units(df):
-    df = df.copy()
-
-    # Convert distance from meters to kilometers and overwrite the column
-    distance_cols = findColumns(df, "distance")
-    for distance_col in distance_cols:
-        df[distance_col] = round(df[distance_col] / 1000, 1)
-
-    time_cols = findColumns(df, "time")
-    for time_col in time_cols:
-        # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
-        df[time_col] = pd.to_timedelta(df[time_col], unit="s")
-        df[time_col] = df[time_col].apply(
-            lambda x: f"{x.components.hours:02}:{x.components.minutes:02}"
-        )
-
-    speed_cols = findColumns(df, "speed")
-    for speed_col in speed_cols:
-        # Convert speed from m/s to km/h and overwrite the columns
-        df[speed_col] = round(df[speed_col] * 3.6, 1)
-        df[speed_col] = round(df[speed_col] * 3.6, 1)
-
-    return df
-
-
 def generate_folium_map(activities):
 
     # Create a map centered at the average location
@@ -145,3 +119,27 @@ def findColumns(df, search_term):
     found_columns = [col for col in df.columns if search_term in col]
     print(f"Found {len(found_columns)} columns having {search_term} in name")
     return found_columns
+
+
+def convert_units(df):
+    df = df.copy()
+
+    # Convert distance from meters to kilometers and overwrite the column
+    distance_cols = findColumns(df, "distance")
+    for distance_col in distance_cols:
+        df[distance_col] = round(df[distance_col] / 1000, 1)
+
+    # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
+    time_cols = findColumns(df, "time")
+    for time_col in time_cols:
+        df[time_col] = pd.to_timedelta(df[time_col], unit="s")
+        df[time_col] = df[time_col].apply(
+            lambda x: f"{x.components.days} days {x.components.hours:02}:{x.components.minutes:02}"
+        )
+
+    # Convert speed from m/s to km/h and overwrite the columns
+    speed_cols = findColumns(df, "speed")
+    for speed_col in speed_cols:
+        df[speed_col] = round(df[speed_col] * 3.6, 1)
+
+    return df
