@@ -16,33 +16,22 @@ from strava_dash.func import (
 # TODO general: parts may be split up and put in other files (too much)
 
 
-# Connect to PostgreSQL database using SQLAlchemy
+# Connect and fetch data from psql
 engine = get_engine()
-
-# Load athlete
-athlete_query = (
-    "SELECT * FROM athlete"  # Replace 'your_table' with your actual table name
-)
-
 athlete = fetch_data(
     engine,
-    athlete_query,
+    "SELECT * FROM athlete",
     index_col="athlete_id",
-)
-
-# Load activities
-activities_query = (
-    "SELECT * FROM activities"  # Replace 'your_table' with your actual table name
 )
 
 activities = fetch_data(
     engine,
-    activities_query,
+    "SELECT * FROM activities",
     "activity_id",
 )
 
 
-# NOTE OBJECT FOR TAB ACTIVITIES
+# TAB ACTIVITIES
 # Creating df for all individual activities
 activities["start_date"] = pd.to_datetime(activities["start_date"])
 activities = activities.sort_values("start_date", ascending=False)
@@ -50,11 +39,11 @@ activities_ready = convert_units(
     activities[columns_shorter]
 )  # TODO may need some rephrasing in output
 
-# NOTE OBJECT FOR TAB HEATMAP
+# TAB HEATMAP
 # Creating heatmap
 generate_folium_map(activities)
 
-# NOTE OBJECT FOR TAB OVERVIEW
+# TAB OVERVIEW
 # Creating line graph of cumulative distance per year
 activities_ready["start_year"] = activities_ready["start_date"].dt.year
 activities_ready["annual_cumulative_distance"] = (
@@ -221,7 +210,7 @@ def render_content(tab):
         return html.Iframe(
             srcDoc=open("heatmap.html", "r").read(),  # Load the saved HTML file
             width="100%",  # Width of the map
-            height="600",  # Height of the map
+            height="1200",  # Height of the map
         )
 
     elif tab == "overview":
