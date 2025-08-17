@@ -121,13 +121,13 @@ def findColumns(df, search_term):
     return found_columns
 
 
-def convert_units(df):
+def convert_units(df, rounding_digits = 0):
     df = df.copy()
 
-    # Convert distance from meters to kilometers and overwrite the column
+    # Convert distance from meters to kilometers and overwrite column
     distance_cols = findColumns(df, "distance")
     for distance_col in distance_cols:
-        df[distance_col] = round(df[distance_col] / 1000, 1)
+        df[distance_col] = round(df[distance_col] / 1000, rounding_digits)
 
     # Convert moving_time (seconds) to timedelta and then to minutes, overwrite the column
     time_cols = findColumns(df, "time")
@@ -140,6 +140,9 @@ def convert_units(df):
     # Convert speed from m/s to km/h and overwrite the columns
     speed_cols = findColumns(df, "speed")
     for speed_col in speed_cols:
-        df[speed_col] = round(df[speed_col] * 3.6, 1)
+        df[speed_col] = round(df[speed_col] * 3.6, rounding_digits)
 
+     # Rounding elevation gain
+    df["total_elevation_gain"] = round(df["total_elevation_gain"], rounding_digits)   
+ 
     return df
