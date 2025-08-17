@@ -53,7 +53,13 @@ columns_short = [
 
 # Retrieve database credentials from environment variables
 def get_engine():
+    """
+    Create and return a SQLAlchemy engine for a PostgreSQL database. 
+    Loads credentials from a .env file and builds the connection string.
 
+    Returns:
+        Engine: SQLAlchemy engine connected to the specified database.
+    """
     if load_dotenv():
         DATABASE_USER = os.getenv("POSTGRES_USER")
         DATABASE_PASSWORD = os.getenv("POSTGRES_PASSWORD")
@@ -77,6 +83,15 @@ def fetch_data(engine, query, index_col=None):
 
 
 def generate_folium_map(activities):
+    """
+    Generate an interactive Folium map of activities. Plots activity routes 
+    from encoded polylines with sport-specific colors and saves the map as 
+    'heatmap.html'. Produced html file is implemented in dash dashboard.
+
+    Parameters:
+        activities (DataFrame): Activity data with 'summary_polyline' and
+                                'sport_type' columns.
+    """
 
     # Create a map centered at the average location
     average_lat = 49.37
@@ -85,7 +100,7 @@ def generate_folium_map(activities):
     mymap = folium.Map(
         location=[average_lat, average_lon],
         zoom_start=10,
-        tiles="CartoDB Positron",
+        tiles="CartoDB Positron", # map style
     )
 
     for activity in activities.index:
@@ -117,7 +132,7 @@ def generate_folium_map(activities):
 
 def findColumns(df, search_term):
     found_columns = [col for col in df.columns if search_term in col]
-    print(f"Found {len(found_columns)} columns having {search_term} in name")
+    # print(f"Found {len(found_columns)} columns having {search_term} in name")
     return found_columns
 
 
