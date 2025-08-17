@@ -31,7 +31,7 @@ ENV PYTHONUNBUFFERED=1
 # CMD ["python", "strava_dash/main.py"]
 
 # Command to run the WSGI server (-w defines number of workers)
-CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "strava_dash.main:server"]
+CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "app.main:server"]
 
 # sudo docker run -it --rm --network="host" strava_dash
 
