@@ -15,7 +15,7 @@ The app provides interactive tables, graphs, and a heatmap of your activities.
 
 ## Requirements
 - Python 3.9+  
-- PostgreSQL database with Strava data  
+- PostgreSQL database with Strava data (see corresponding app here: https://github.com/TobiasAnh/strava_analysis)
 
 
 If running locally without Docker, install dependencies:
