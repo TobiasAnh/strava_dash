@@ -30,26 +30,11 @@ activities = fetch_data(
     "activity_id",
 )
 
-
-# TAB ACTIVITIES
-# Creating df for all individual activities
+# Tidy up dataframe
 activities["start_date"] = pd.to_datetime(activities["start_date"])
 activities = activities.sort_values("start_date", ascending=False)
 activities_ready = convert_units(
     activities[columns_shorter]
-)  # TODO may need some rephrasing in output
-
-# TAB HEATMAP
-# Creating heatmap
-generate_folium_map(activities)
-
-# TAB OVERVIEW
-# Creating line graph of cumulative distance per year
-activities_ready["start_year"] = activities_ready["start_date"].dt.year
-activities_ready["annual_cumulative_distance"] = (
-    activities_ready.sort_values("start_date")
-    .groupby("start_year")["distance"]
-    .cumsum()
 )
 
 # Get current year and aimed distance goal
@@ -58,13 +43,43 @@ start_date = pd.to_datetime(f"{current_year}-01-01")
 end_date = pd.to_datetime(f"{current_year}-12-31")
 days_in_year = (end_date - start_date).days + 1
 
-# Define the distance goal
+# Define annual distance goal
 total_goal_distance = 8000  # TODO Hardcoded
 daily_distance_goal = total_goal_distance / days_in_year  # km/day
 goal_dates = pd.date_range(start_date, end_date, freq="D")
 goal_distances = daily_distance_goal * (goal_dates - start_date).days
 
+# Get cumulative distance for each year
+activities_ready["start_year"] = activities_ready["start_date"].dt.year
+activities_ready["annual_cumulative_distance"] = (
+    activities_ready.sort_values("start_date")
+    .groupby("start_year")["distance"]
+    .cumsum()
+)
+# Creating df of annual summaries
+annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")).agg(
+    n_activities=("resource_state", "size"),
+    total_distance=("distance", "sum"),
+    total_moving_time=("moving_time", "sum"),
+    total_elapsed_time=("elapsed_time", "sum"),
+    total_elevation_gain=("total_elevation_gain", "sum"),
+    max_speed=("max_speed", "max"),
+    average_speed=("average_speed", "mean"),
+)
 
+annual_summaries["average_speed_weighted"] = activities.groupby(
+    activities["start_date"].dt.to_period("Y")
+).apply(lambda x: (x["average_speed"] * x["distance"]).sum() / x["distance"].sum())
+
+annual_summaries = convert_units(annual_summaries)
+annual_summaries = annual_summaries.reset_index(drop=False)
+annual_summaries["start_date"] = annual_summaries["start_date"].astype(str).astype(int)
+annual_summaries_ready = annual_summaries.sort_values("start_date", ascending=False)
+
+
+# Creating graphs 
+
+# Line graph of cumulative distance per year
 fig_annual_cumsum = px.line(
     activities_ready.query("start_year == @current_year"),
     x="start_date",  # Adjust column name if needed
@@ -97,25 +112,9 @@ fig_annual_cumsum.add_scatter(
     line=dict(color="grey", dash="dash"),  # Customize the line style (red, dashed)
 )
 
-# Creating df of annual summaries
-annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")).agg(
-    n_activities=("resource_state", "size"),
-    total_distance=("distance", "sum"),
-    total_moving_time=("moving_time", "sum"),
-    total_elapsed_time=("elapsed_time", "sum"),
-    total_elevation_gain=("total_elevation_gain", "sum"),
-    max_speed=("max_speed", "max"),
-    average_speed=("average_speed", "mean"),
-)
+# Creating heatmap
+generate_folium_map(activities)
 
-annual_summaries["average_speed_weighted"] = activities.groupby(
-    activities["start_date"].dt.to_period("Y")
-).apply(lambda x: (x["average_speed"] * x["distance"]).sum() / x["distance"].sum())
-
-annual_summaries = convert_units(annual_summaries)
-annual_summaries = annual_summaries.reset_index(drop=False)
-annual_summaries["start_date"] = annual_summaries["start_date"].astype(str).astype(int)
-annual_summaries_ready = annual_summaries.sort_values("start_date", ascending=False)
 
 # NOTE Initialize the Dash app
 app = dash.Dash(
