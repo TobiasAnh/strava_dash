@@ -30,12 +30,6 @@ activities = fetch_data(
     "activity_id",
 )
 
-# Tidy up dataframe
-activities["start_date"] = pd.to_datetime(activities["start_date"])
-activities = activities.sort_values("start_date", ascending=False)
-activities_ready = convert_units(
-    activities[columns_shorter]
-)
 
 # Get current year and aimed distance goal
 current_year = datetime.now().year
@@ -48,6 +42,17 @@ total_goal_distance = 8000  # TODO Hardcoded
 daily_distance_goal = total_goal_distance / days_in_year  # km/day
 goal_dates = pd.date_range(start_date, end_date, freq="D")
 goal_distances = daily_distance_goal * (goal_dates - start_date).days
+
+
+# Tidy up activities dataframe
+activities["start_date"] = pd.to_datetime(activities["start_date"])
+activities = activities.sort_values("start_date", ascending=False)
+activities_ready = convert_units(
+    activities[columns_shorter], rounding_digits=1
+)
+activities_ready["name"] = activities_ready["name"].apply(lambda x: x[:40])   # Shorten names for display
+
+
 
 # Get cumulative distance for each year
 activities_ready["start_year"] = activities_ready["start_date"].dt.year
@@ -71,10 +76,11 @@ annual_summaries["average_speed_weighted"] = activities.groupby(
     activities["start_date"].dt.to_period("Y")
 ).apply(lambda x: (x["average_speed"] * x["distance"]).sum() / x["distance"].sum())
 
-annual_summaries = convert_units(annual_summaries)
+annual_summaries = convert_units(annual_summaries, rounding_digits=1)
 annual_summaries = annual_summaries.reset_index(drop=False)
 annual_summaries["start_date"] = annual_summaries["start_date"].astype(str).astype(int)
 annual_summaries_ready = annual_summaries.sort_values("start_date", ascending=False)
+
 
 
 # Creating graphs 
@@ -90,6 +96,7 @@ fig_annual_cumsum = px.line(
 
 fig_annual_cumsum.update_layout(
     xaxis=dict(
+        title=None,
         range=[start_date, end_date],  # Full year range on x-axis
         tickformat="%b",  # Show month abbreviations on the x-axis
         tickmode="array",  # Specify custom ticks
@@ -101,7 +108,13 @@ fig_annual_cumsum.update_layout(
             for date in pd.date_range(start=start_date, end=end_date, freq="MS")
         ],  # Month names
     ),
-    yaxis=dict(title="Cumulative Distance (km)"),
+    yaxis=dict(title=f"Cumulative Distance (km) in {current_year}"),
+    legend=dict(
+        x=0.05,  # Place at the right side of the plot area
+        y=0.95,  # Place at the bottom side of the plot area
+        xanchor='left',  # Anchor the legend to the right
+        yanchor='top'  # Anchor the legend to the bottom
+    )
 )
 
 fig_annual_cumsum.add_scatter(
@@ -116,10 +129,15 @@ fig_annual_cumsum.add_scatter(
 generate_folium_map(activities)
 
 
+
+# Final cleaning of table column (needs to be after generating cumulative distance)
+activities_ready["start_date"] = activities_ready["start_date"].dt.strftime('%B %d, %Y')
+
+
 # NOTE Initialize the Dash app
 app = dash.Dash(
     __name__,
-    external_stylesheets=["/assets/bootstrap.min.css"],
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
 server = app.server  # Expose the Flask server instance for WSGI servers
 
@@ -130,11 +148,10 @@ app.layout = html.Div(
             [
                 dbc.Row(
                     dbc.Col(
-                        html.H1(
+                        html.H3(
                             f"Strava activities of {athlete['firstname'].values}",
                             style={"text-align": "center"},
                         ),
-                        width={"size": 6, "offset": 3},
                     )
                 ),
                 dbc.Row(
@@ -148,17 +165,17 @@ app.layout = html.Div(
                                         dcc.Tab(
                                             label="Overview",
                                             value="overview",
-                                            style={"width": "50%"},
+                                            
                                         ),
                                         dcc.Tab(
                                             label="Activities",
                                             value="activities",
-                                            style={"width": "50%"},
+                                            
                                         ),
                                         dcc.Tab(
                                             label="Heatmap",
                                             value="heatmap",
-                                            style={"width": "50%"},
+                                            
                                         ),
                                     ],
                                     style={
@@ -170,7 +187,7 @@ app.layout = html.Div(
                                 html.Div(id="tabs-content", style={"width": "100%"}),
                             ],
                         ),
-                        width=12,  # Full width
+                        width="100%",  # Full width
                     )
                 ),
             ],
@@ -199,7 +216,7 @@ def render_content(tab):
                     style_header={"fontWeight": "bold"},
                     # Enable sorting, filtering, and pagination
                     sort_action="native",
-                    filter_action="native",
+                    # filter_action="native",
                     page_action="native",
                     page_size=100,  # Show 5 rows per page
                 ),
@@ -231,8 +248,8 @@ def render_content(tab):
                     style_cell={"textAlign": "right"},
                     style_header={"fontWeight": "bold"},
                     # Enable sorting, filtering, and pagination
-                    sort_action="native",
-                    filter_action="native",
+                    # sort_action="native",
+                    # filter_action="native",
                     page_action="native",
                     page_size=100,  # Show 5 rows per page
                 ),

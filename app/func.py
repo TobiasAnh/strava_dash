@@ -8,6 +8,7 @@ import folium
 
 columns_shorter = [
     "start_date",
+    "activities_type",
     "name",
     "distance",
     "moving_time",
@@ -126,6 +127,7 @@ def generate_folium_map(activities):
         # Add a PolyLine to connect the coordinates
         folium.PolyLine(coordinates, color=color, weight=2.5, opacity=0.2).add_to(mymap)
 
+    
     # Save the map to an HTML file
     mymap.save("heatmap.html")
 
