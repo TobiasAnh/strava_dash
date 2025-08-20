@@ -47,11 +47,10 @@ goal_distances = daily_distance_goal * (goal_dates - start_date).days
 # Tidy up activities dataframe
 activities["start_date"] = pd.to_datetime(activities["start_date"])
 activities = activities.sort_values("start_date", ascending=False)
-activities_ready = convert_units(
-    activities[columns_shorter], rounding_digits=1
-)
-activities_ready["name"] = activities_ready["name"].apply(lambda x: x[:40])   # Shorten names for display
-
+activities_ready = convert_units(activities[columns_shorter], rounding_digits=1)
+activities_ready["name"] = activities_ready["name"].apply(
+    lambda x: x[:40]
+)  # Shorten names for display
 
 
 # Get cumulative distance for each year
@@ -82,8 +81,7 @@ annual_summaries["start_date"] = annual_summaries["start_date"].astype(str).asty
 annual_summaries_ready = annual_summaries.sort_values("start_date", ascending=False)
 
 
-
-# Creating graphs 
+# Creating graphs
 
 # Line graph of cumulative distance per year
 fig_annual_cumsum = px.line(
@@ -110,11 +108,11 @@ fig_annual_cumsum.update_layout(
     ),
     yaxis=dict(title=f"Cumulative Distance (km) in {current_year}"),
     legend=dict(
-        x=0.05,  # Place at the right side of the plot area
+        x=0.03,  # Place at the right side of the plot area
         y=0.95,  # Place at the bottom side of the plot area
-        xanchor='left',  # Anchor the legend to the right
-        yanchor='top'  # Anchor the legend to the bottom
-    )
+        xanchor="left",  # Anchor the legend to the right
+        yanchor="top",  # Anchor the legend to the bottom
+    ),
 )
 
 fig_annual_cumsum.add_scatter(
@@ -129,12 +127,11 @@ fig_annual_cumsum.add_scatter(
 generate_folium_map(activities)
 
 
-
 # Final cleaning of table column (needs to be after generating cumulative distance)
-activities_ready["start_date"] = activities_ready["start_date"].dt.strftime('%B %d, %Y')
+activities_ready["start_date"] = activities_ready["start_date"].dt.strftime("%B %d, %Y")
 
 
-# NOTE Initialize the Dash app
+# Initialize the Dash app
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
@@ -165,17 +162,14 @@ app.layout = html.Div(
                                         dcc.Tab(
                                             label="Overview",
                                             value="overview",
-                                            
                                         ),
                                         dcc.Tab(
                                             label="Activities",
                                             value="activities",
-                                            
                                         ),
                                         dcc.Tab(
                                             label="Heatmap",
                                             value="heatmap",
-                                            
                                         ),
                                     ],
                                     style={
@@ -192,6 +186,35 @@ app.layout = html.Div(
                 ),
             ],
             fluid=True,  # Improved responsiveness
+        ),
+        dbc.Container(
+            [
+                dbc.Row(
+                    html.P(
+                        [
+                            "Source code dashboard: ",
+                            html.A(
+                                "https://github.com/TobiasAnh/strava_dash",
+                                href="https://github.com/TobiasAnh/strava_dash",
+                                target="_blank",  # This opens the link in a new tab
+                            ),
+                            " | ",
+                            "Source code underlying data pipeline: ",
+                            html.A(
+                                "https://github.com/TobiasAnh/strava_analysis",
+                                href="https://github.com/TobiasAnh/strava_analysis",
+                                target="_blank",  # This opens the link in a new tab
+                            ),
+                        ],
+                        style={
+                            "text-align": "center",
+                            "margin-top": "0px",
+                            "margin-bottom": "0px",
+                        },
+                    )
+                ),
+            ],
+            className="fixed-bottom bg-light p-2",  # This is the key part for styling
         ),
     ]
 )
@@ -226,7 +249,7 @@ def render_content(tab):
         return html.Iframe(
             srcDoc=open("heatmap.html", "r").read(),  # Load the saved HTML file
             width="100%",  # Width of the map
-            height="1200",  # Height of the map
+            height="800",  # Height of the map
         )
 
     elif tab == "overview":
