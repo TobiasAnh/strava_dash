@@ -17,17 +17,4 @@ The app provides interactive tables, graphs, and a heatmap of your activities.
 - Python 3.9+  
 - PostgreSQL database with Strava data (see corresponding app here: https://github.com/TobiasAnh/strava_analysis). Environmental variables are loaded from .env file that needs to be created in the project root.
 
-Example of .env file:
-
-POSTGRES_USER=xxx
-POSTGRES_PASSWORD=xxx
-POSTGRES_HOST=xxx
-POSTGRES_PORT=xxx
-POSTGRES_DB=xxx 
-
-
-Clone repo and run docker command:
-```bash
-   git clone https://github.com/TobiasAnh/strava_dash
-   sudo docker run --rm --network host strava_dash
 ```
