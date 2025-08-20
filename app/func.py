@@ -55,7 +55,7 @@ columns_short = [
 # Retrieve database credentials from environment variables
 def get_engine():
     """
-    Create and return a SQLAlchemy engine for a PostgreSQL database. 
+    Create and return a SQLAlchemy engine for a PostgreSQL database.
     Loads credentials from a .env file and builds the connection string.
 
     Returns:
@@ -83,51 +83,98 @@ def fetch_data(engine, query, index_col=None):
     return df
 
 
-def generate_folium_map(activities):
+def generate_folium_map(activities, marker_opacity=0.5):
     """
-    Generate an interactive Folium map of activities. Plots activity routes 
-    from encoded polylines with sport-specific colors and saves the map as 
-    'heatmap.html'. Produced html file is implemented in dash dashboard.
+    Generate an interactive Folium map of activities. Plots activity routes
+    from encoded polylines with sport-specific colors and adds a legend
+    based on sport type.
 
     Parameters:
         activities (DataFrame): Activity data with 'summary_polyline' and
                                 'sport_type' columns.
     """
 
-    # Create a map centered at the average location
+    # Create a map centered over Heidelberg
     average_lat = 49.37
     average_lon = 8.78
 
     mymap = folium.Map(
         location=[average_lat, average_lon],
-        zoom_start=10,
-        tiles="CartoDB Positron", # map style
+        zoom_start=9,
+        tiles="CartoDB Positron",  # map style
     )
 
+    # Dictionary to hold the colors and labels for the legend
+    legend_items = {}
+
     for activity in activities.index:
-        activity = activities.loc[activity]
-        if not activity["summary_polyline"]:
-            # print(f"No polyline found for {activity['name']}, {activity['start_date']}")
+        activity_data = activities.loc[activity]
+        if not activity_data["summary_polyline"]:
+            # print(f"No polyline found for {activity_data['name']}, {activity_data['start_date']}")
             continue
 
-        activity_polyline = activity["summary_polyline"]
+        activity_polyline = activity_data["summary_polyline"]
         coordinates = polyline.decode(activity_polyline)
+        sport_type = activity_data["sport_type"]
 
-        if activity["sport_type"] == "Ride":
+        # Determine the color based on sport type
+        if sport_type == "Ride":
             color = "#1f78b4"
-        elif activity["sport_type"] == "MountainBikeRide":
+            label = "Road bike"
+        elif sport_type == "MountainBikeRide":
             color = "#ff7f00"
-        elif activity["sport_type"] == "Hike":
+            label = "MTB"
+        elif sport_type == "Hike":
             color = "#33a02c"
-        elif activity["sport_type"] == "VirtualRide":
+            label = sport_type
+        elif sport_type == "VirtualRide":
             color = "#6a3d9a"
+            label = sport_type
         else:
             color = "#e31a1c"
+            label = "Other"
+
+        # Add the color and label to our legend dictionary if it's not already there
+        legend_items[label] = color
 
         # Add a PolyLine to connect the coordinates
-        folium.PolyLine(coordinates, color=color, weight=2.5, opacity=0.2).add_to(mymap)
+        folium.PolyLine(
+            coordinates, color=color, weight=2.5, opacity=marker_opacity
+        ).add_to(mymap)
 
-    
+    # --- Create the custom legend HTML ---
+    # We will build the legend dynamically based on the sport types found
+    # in the data.
+
+    legend_html_items = ""
+    for label, color in legend_items.items():
+        legend_html_items += f"""
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+              <div style="width: 20px; height: 10px; background-color: {color}; margin-right: 5px;"></div>
+              {label}
+            </div>
+        """
+
+    legend_html = f"""
+     <div style="position: fixed; 
+                 top: 10px; right: 10px; 
+                 width: auto; height: auto; 
+                 border: 2px solid grey; 
+                 z-index:9999; font-size:14px;
+                 background-color: white;
+                 opacity: 0.9;">
+       <div style="background-color: #f0f0f0; padding: 5px; text-align: center; font-weight: bold;">
+         Activity Types
+       </div>
+       <div style="padding: 10px;">
+         {legend_html_items}
+       </div>
+     </div>
+     """
+
+    # Add the HTML legend to the map
+    mymap.get_root().html.add_child(folium.Element(legend_html))
+
     # Save the map to an HTML file
     mymap.save("heatmap.html")
 
@@ -138,7 +185,7 @@ def findColumns(df, search_term):
     return found_columns
 
 
-def convert_units(df, rounding_digits = 0):
+def convert_units(df, rounding_digits=0):
     df = df.copy()
 
     # Convert distance from meters to kilometers and overwrite column
@@ -159,7 +206,7 @@ def convert_units(df, rounding_digits = 0):
     for speed_col in speed_cols:
         df[speed_col] = round(df[speed_col] * 3.6, rounding_digits)
 
-     # Rounding elevation gain
-    df["total_elevation_gain"] = round(df["total_elevation_gain"], rounding_digits)   
- 
+    # Rounding elevation gain
+    df["total_elevation_gain"] = round(df["total_elevation_gain"], rounding_digits)
+
     return df
