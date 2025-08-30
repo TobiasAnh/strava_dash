@@ -124,7 +124,21 @@ fig_annual_cumsum.add_scatter(
 )
 
 # Creating heatmap
-generate_folium_map(activities)
+
+generate_folium_map(
+    activities,
+    "app/heatmaps/heatmap_all_activities.html",
+    "Activity type",
+    5,
+    (49.37, 8.78),  # Heidelberg
+)
+
+generate_folium_map(
+    activities.head(1),
+    "app/heatmaps/last_activity.html",
+    "Last activity",
+    zoom_start=12,
+)
 
 
 # Final cleaning of table column (needs to be after generating cumulative distance)
@@ -157,18 +171,18 @@ app.layout = html.Div(
                             [
                                 dcc.Tabs(
                                     id="tabs",
-                                    value="overview",
+                                    value="activities",
                                     children=[
                                         dcc.Tab(
-                                            label="Overview",
-                                            value="overview",
-                                        ),
-                                        dcc.Tab(
-                                            label="Activities",
+                                            label="All activities",
                                             value="activities",
                                         ),
                                         dcc.Tab(
-                                            label="Heatmap",
+                                            label="Annual overview",
+                                            value="annual_overview",
+                                        ),
+                                        dcc.Tab(
+                                            label="Lifetime Heatmap",
                                             value="heatmap",
                                         ),
                                     ],
@@ -230,6 +244,13 @@ def render_content(tab):
         # Content for the first tab
         return html.Div(
             [
+                html.Iframe(
+                    srcDoc=open(
+                        "app/heatmaps/last_activity.html", "r"
+                    ).read(),  # Load the saved HTML file
+                    width="100%",  # Width of the map
+                    height="400",  # Height of the map
+                ),
                 dash_table.DataTable(
                     id="table_activities",
                     columns=[{"name": i, "id": i} for i in activities_ready.columns],
@@ -247,12 +268,14 @@ def render_content(tab):
         )
     elif tab == "heatmap":
         return html.Iframe(
-            srcDoc=open("heatmap.html", "r").read(),  # Load the saved HTML file
+            srcDoc=open(
+                "app/heatmaps/heatmap_all_activities.html", "r"
+            ).read(),  # Load the saved HTML file
             width="100%",  # Width of the map
             height="800",  # Height of the map
         )
 
-    elif tab == "overview":
+    elif tab == "annual_overview":
         # Placeholder content for the new tab
         return html.Div(
             [
