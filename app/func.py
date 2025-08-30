@@ -1,7 +1,9 @@
 from dotenv import load_dotenv
 import os
 from sqlalchemy import create_engine
+import numpy as np
 import pandas as pd
+import ast
 import polyline
 import plotly.graph_objects as go
 import folium
@@ -83,7 +85,14 @@ def fetch_data(engine, query, index_col=None):
     return df
 
 
-def generate_folium_map(activities, marker_opacity=0.5):
+def generate_folium_map(
+    activities,
+    file_name,
+    legend_name,
+    zoom_start,
+    lat_lon="auto",
+    marker_opacity=0.5,
+):
     """
     Generate an interactive Folium map of activities. Plots activity routes
     from encoded polylines with sport-specific colors and adds a legend
@@ -92,15 +101,32 @@ def generate_folium_map(activities, marker_opacity=0.5):
     Parameters:
         activities (DataFrame): Activity data with 'summary_polyline' and
                                 'sport_type' columns.
+        lat_long (tuple): Tuple of latitude and longitude coordinates
+        file_name (str): name of produced html file
+        marker_opacity (float): opacity of marker used for heatmap
     """
 
     # Create a map centered over Heidelberg
-    average_lat = 49.37
-    average_lon = 8.78
+    if lat_lon == "auto":
+
+        latitudes = []
+        longitudes = []
+        for coords in ["start_latlng", "end_latlng"]:
+            # Convert string to list and convert start coords
+            activities[coords] = activities[coords].apply(ast.literal_eval)
+
+            latitudes.append(activities[coords].apply(lambda x: x[0]).to_list())
+            longitudes.append(activities[coords].apply(lambda x: x[1]).to_list())
+
+        # Calculate mean
+        average_lat = np.mean(latitudes)
+        average_lon = np.mean(longitudes)
+    else:
+        average_lat, average_lon = lat_lon
 
     mymap = folium.Map(
         location=[average_lat, average_lon],
-        zoom_start=9,
+        zoom_start=zoom_start,
         tiles="CartoDB Positron",  # map style
     )
 
@@ -164,7 +190,7 @@ def generate_folium_map(activities, marker_opacity=0.5):
                  background-color: white;
                  opacity: 0.9;">
        <div style="background-color: #f0f0f0; padding: 5px; text-align: center; font-weight: bold;">
-         Activity Types
+         {legend_name}
        </div>
        <div style="padding: 10px;">
          {legend_html_items}
@@ -176,7 +202,7 @@ def generate_folium_map(activities, marker_opacity=0.5):
     mymap.get_root().html.add_child(folium.Element(legend_html))
 
     # Save the map to an HTML file
-    mymap.save("heatmap.html")
+    mymap.save(file_name)
 
 
 def findColumns(df, search_term):
