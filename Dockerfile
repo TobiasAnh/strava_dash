@@ -1,6 +1,10 @@
 # Use an official Python base image
 FROM python:3.10.12-slim
 
+# Set working directory to the project root inside the container
+# This is where pyproject.toml and src/ will live
+WORKDIR /app
+
 # Install system dependencies and Poetry
 RUN apt-get update && \
     apt-get install -y curl build-essential libpq-dev git && \
@@ -8,31 +12,28 @@ RUN apt-get update && \
     ln -s /root/.local/bin/poetry /usr/local/bin/poetry && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
-WORKDIR /app
-
-# enable Poetry virtual environments
+# Tell poetry not to create a virtual environment in a separate location
 ENV POETRY_VIRTUALENVS_CREATE=false
-ENV PYTHONPATH=/app
+
 # Copy only pyproject.toml and poetry.lock to leverage Docker caching
+# We will copy them to the WORKDIR, which is /app
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies (including pandas)
+# Install dependencies
 RUN poetry install --no-root
 
-# Copy the application code
-COPY . .
+# Copy the source code. This copies the src/ folder and its contents
+# from your local machine into the /app directory in the container.
+COPY . /app
 
-# Set environment variables (optional)
-ENV PYTHONUNBUFFERED=1
-
+# Set the PATH to include Poetry's executables and the source code
+# This is a critical step for a containerized environment
+ENV PATH="/root/.local/bin:$PATH"
+ENV PYTHONPATH=/app/src
 
 # Set the default command to run the application
-# CMD ["python", "strava_dash/main.py"]
-
-# Command to run the WSGI server (-w defines number of workers)
+# CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "app.main:server"]
+# Assuming your main application is in src/app/main.py, the above command is correct.
+# gunicorn will look for the 'app' package, which is inside the 'src' directory.
+# Since we set PYTHONPATH=/app/src, it will find it.
 CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "app.main:server"]
-
-# sudo docker run -it --rm --network="host" strava_dash
-
-
