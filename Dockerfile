@@ -1,10 +1,6 @@
 # Use an official Python base image
 FROM python:3.10.12-slim
 
-# Set working directory to the project root inside the container
-# This is where pyproject.toml and src/ will live
-WORKDIR /app
-
 # Install system dependencies and Poetry
 RUN apt-get update && \
     apt-get install -y curl build-essential libpq-dev git && \
@@ -12,7 +8,11 @@ RUN apt-get update && \
     ln -s /root/.local/bin/poetry /usr/local/bin/poetry && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Tell poetry not to create a virtual environment in a separate location
+# Set working directory to the project root inside the container
+# This is where pyproject.toml and src/ will live
+WORKDIR /app
+
+    # Tell poetry not to create a virtual environment in a separate location
 ENV POETRY_VIRTUALENVS_CREATE=false
 
 # Copy only pyproject.toml and poetry.lock to leverage Docker caching
@@ -36,4 +36,4 @@ ENV PYTHONPATH=/app/src
 # Assuming your main application is in src/app/main.py, the above command is correct.
 # gunicorn will look for the 'app' package, which is inside the 'src' directory.
 # Since we set PYTHONPATH=/app/src, it will find it.
-CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "app.main:server"]
+CMD ["poetry", "run", "gunicorn", "-w", "9", "-b", "0.0.0.0:8050", "strava_dash.main:server"]
