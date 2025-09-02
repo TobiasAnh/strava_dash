@@ -30,6 +30,7 @@ activities = fetch_data(
     "activity_id",
 )
 
+# NOTE new aspects start here. So copy/paste this into the new myactivities/
 
 # Get current year and aimed distance goal
 current_year = datetime.now().year
@@ -54,14 +55,20 @@ activities_ready["name"] = activities_ready["name"].apply(
 
 
 # Get cumulative distance for each year
+activities_ready = activities_ready.reset_index()
 activities_ready["start_year"] = activities_ready["start_date"].dt.year
 activities_ready["annual_cumulative_distance"] = (
     activities_ready.sort_values("start_date")
     .groupby("start_year")["distance"]
     .cumsum()
 )
+activities_ready = activities_ready.set_index("activity_id")
+
+
 # Creating df of annual summaries
-annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")).agg(
+annual_summaries = activities.groupby(
+    activities["start_date"].dt.tz_convert(None).dt.to_period("Y")
+).agg(
     n_activities=("resource_state", "size"),
     total_distance=("distance", "sum"),
     total_moving_time=("moving_time", "sum"),
@@ -72,7 +79,7 @@ annual_summaries = activities.groupby(activities["start_date"].dt.to_period("Y")
 )
 
 annual_summaries["average_speed_weighted"] = activities.groupby(
-    activities["start_date"].dt.to_period("Y")
+    activities["start_date"].dt.tz_convert(None).dt.to_period("Y")
 ).apply(lambda x: (x["average_speed"] * x["distance"]).sum() / x["distance"].sum())
 
 annual_summaries = convert_units(annual_summaries, rounding_digits=1)
@@ -137,7 +144,7 @@ generate_folium_map(
     activities.head(1),
     "app/heatmaps/last_activity.html",
     "Last activity",
-    zoom_start=12,
+    zoom_start=11,
 )
 
 
@@ -171,19 +178,19 @@ app.layout = html.Div(
                             [
                                 dcc.Tabs(
                                     id="tabs",
-                                    value="activities",
+                                    value="lifetime",
                                     children=[
                                         dcc.Tab(
-                                            label="All activities",
-                                            value="activities",
+                                            label="Activities (lifetime)",
+                                            value="lifetime",
+                                        ),
+                                        dcc.Tab(
+                                            label="Activities (last one)",
+                                            value="last",
                                         ),
                                         dcc.Tab(
                                             label="Annual overview",
                                             value="annual_overview",
-                                        ),
-                                        dcc.Tab(
-                                            label="Lifetime Heatmap",
-                                            value="heatmap",
                                         ),
                                     ],
                                     style={
@@ -240,7 +247,7 @@ app.layout = html.Div(
     [dash.dependencies.Input("tabs", "value")],
 )
 def render_content(tab):
-    if tab == "activities":
+    if tab == "last":
         # Content for the first tab
         return html.Div(
             [
@@ -249,7 +256,32 @@ def render_content(tab):
                         "app/heatmaps/last_activity.html", "r"
                     ).read(),  # Load the saved HTML file
                     width="100%",  # Width of the map
-                    height="400",  # Height of the map
+                    height="600",  # Height of the map
+                ),
+                dash_table.DataTable(
+                    id="table_activities",
+                    columns=[{"name": i, "id": i} for i in activities_ready.columns],
+                    data=activities_ready.head(1).to_dict("records"),
+                    style_table={"width": "100%", "margin": "auto"},
+                    style_cell={"textAlign": "right"},
+                    style_header={"fontWeight": "bold"},
+                    # Enable sorting, filtering, and pagination
+                    sort_action="native",
+                    # filter_action="native",
+                    page_action="native",
+                    page_size=100,  # Show 5 row sper page
+                ),
+            ]
+        )
+    elif tab == "lifetime":
+        return html.Div(
+            [
+                html.Iframe(
+                    srcDoc=open(
+                        "app/heatmaps/heatmap_all_activities.html", "r"
+                    ).read(),  # Load the saved HTML file
+                    width="100%",  # Width of the map
+                    height="600",  # Height of the map
                 ),
                 dash_table.DataTable(
                     id="table_activities",
@@ -262,19 +294,10 @@ def render_content(tab):
                     sort_action="native",
                     # filter_action="native",
                     page_action="native",
-                    page_size=100,  # Show 5 rows per page
+                    page_size=10,  # Show 5 row sper page
                 ),
             ]
         )
-    elif tab == "heatmap":
-        return html.Iframe(
-            srcDoc=open(
-                "app/heatmaps/heatmap_all_activities.html", "r"
-            ).read(),  # Load the saved HTML file
-            width="100%",  # Width of the map
-            height="800",  # Height of the map
-        )
-
     elif tab == "annual_overview":
         # Placeholder content for the new tab
         return html.Div(
